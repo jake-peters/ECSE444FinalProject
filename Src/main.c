@@ -23,12 +23,30 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#define ARM_MATH_CM4
+#include "arm_math.h"
+#include <math.h>
+#include <stdio.h>
+#include <string.h>
+#include "stm32l475e_iot01.h"
+#include "stm32l475e_iot01_accelero.h"
+#include "stm32l475e_iot01_hsensor.h"
+#include "stm32l475e_iot01_magneto.h"
+#include "stm32l475e_iot01_psensor.h"
+#include "stm32l475e_iot01_qspi.h"
+#include "queue.h"
 
+#include "uart_display.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
+// Define what state the game is in
+typedef enum {
+	GAME_START = 1,
+	GAME_RUNNING = 2,
+	GAME_OVER = 3,
+} game_mode_t;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -54,7 +72,7 @@ UART_HandleTypeDef huart1;
 
 osThreadId defaultTaskHandle;
 /* USER CODE BEGIN PV */
-
+static game_mode_t game_mode = GAME_START; // Initialize game mode to GAME_START
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -112,6 +130,8 @@ int main(void)
   MX_QUADSPI_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
+
+  HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_SET); // Turn Red LED off
 
   /* USER CODE END 2 */
 
@@ -476,6 +496,29 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
+void testingUART() {
+	HAL_UART_Transmit(&huart1,(uint8_t*)plane_straight,sizeof(plane_straight),1000);
+	HAL_UART_Transmit(&huart1,(uint8_t*)plane_right,sizeof(plane_right),1000);
+	HAL_UART_Transmit(&huart1,(uint8_t*)plane_left,sizeof(plane_left),1000);
+}
+
+game_mode_t testingStart(game_mode_t game_mode) {
+	if (game_mode == GAME_START) {
+		while (user_response[0] != 's') {
+			HAL_UART_Transmit(&huart1,(uint8_t*)start_menu_message,sizeof(start_menu_message),1000);
+			while((HAL_OK != HAL_UART_Receive(&huart1, user_response, 1, 5000))){}
+		}
+		HAL_UART_Transmit(&huart1,game_starting_message,sizeof(game_starting_message),1000);
+		for (uint8_t i = 0; i < 5; i++){
+			HAL_UART_Transmit(&huart1,&count_down[i],1,1000);
+			osDelay(1000);
+		}
+		return GAME_RUNNING;
+	}
+}
+void displayInstruction() {
+
+}
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_StartDefaultTask */
@@ -488,11 +531,28 @@ static void MX_GPIO_Init(void)
 void StartDefaultTask(void const * argument)
 {
   /* USER CODE BEGIN 5 */
+
   /* Infinite loop */
-  for(;;)
-  {
-    osDelay(1);
-  }
+
+	for(;;)
+	{
+	osDelay(2000);
+
+
+
+
+
+
+
+
+
+
+
+
+	// Test uart_display.h
+//	game_mode = testingStart(game_mode);
+//	testingUART();
+	}
   /* USER CODE END 5 */
 }
 
@@ -525,7 +585,8 @@ void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
-
+	HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_RESET);
+	__BKPT();
   /* USER CODE END Error_Handler_Debug */
 }
 

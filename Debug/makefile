@@ -55,8 +55,8 @@ ECSE444FinalProject.bin \
 all: ECSE444FinalProject.elf secondary-outputs
 
 # Tool invocations
-ECSE444FinalProject.elf: $(OBJS) $(USER_OBJS) C:\Users\jake_\OneDrive\Documents\ECSE\ 444\stm32cubemx\ECSE444FinalProject\STM32L475VGTX_FLASH.ld
-	arm-none-eabi-gcc -o "ECSE444FinalProject.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\jake_\OneDrive\Documents\ECSE 444\stm32cubemx\ECSE444FinalProject\STM32L475VGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="ECSE444FinalProject.map" -Wl,--gc-sections -static -L../Lib --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+ECSE444FinalProject.elf: $(OBJS) $(USER_OBJS) C:\Users\zheng\Desktop\ECSE\ 444\ECSE444FinalProject\STM32L475VGTX_FLASH.ld
+	arm-none-eabi-gcc -o "ECSE444FinalProject.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\zheng\Desktop\ECSE 444\ECSE444FinalProject\STM32L475VGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="ECSE444FinalProject.map" -Wl,--gc-sections -static -L../Lib --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 

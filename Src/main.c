@@ -70,7 +70,13 @@ TIM_HandleTypeDef htim2;
 
 UART_HandleTypeDef huart1;
 
+<<<<<<< HEAD
 osThreadId defaultTaskHandle;
+=======
+osThreadId check_instructHandle;
+osThreadId change_instructHandle;
+osThreadId print_instructHandle;
+>>>>>>> parent of b71a40e... Orientation printing and basic instruction
 /* USER CODE BEGIN PV */
 static game_mode_t game_mode = GAME_START; // Initialize game mode to GAME_START
 /* USER CODE END PV */
@@ -84,7 +90,13 @@ static void MX_TIM2_Init(void);
 static void MX_I2C2_Init(void);
 static void MX_QUADSPI_Init(void);
 static void MX_USART1_UART_Init(void);
+<<<<<<< HEAD
 void StartDefaultTask(void const * argument);
+=======
+void StartCheckInstruct(void const * argument);
+void StartChangeInstruct(void const * argument);
+void StartPrintInstruct(void const * argument);
+>>>>>>> parent of b71a40e... Orientation printing and basic instruction
 
 /* USER CODE BEGIN PFP */
 
@@ -152,9 +164,23 @@ int main(void)
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
+<<<<<<< HEAD
   /* definition and creation of defaultTask */
   osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 128);
   defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
+=======
+  /* definition and creation of check_instruct */
+  osThreadDef(check_instruct, StartCheckInstruct, osPriorityNormal, 0, 128);
+  check_instructHandle = osThreadCreate(osThread(check_instruct), NULL);
+
+  /* definition and creation of change_instruct */
+  osThreadDef(change_instruct, StartChangeInstruct, osPriorityIdle, 0, 128);
+  change_instructHandle = osThreadCreate(osThread(change_instruct), NULL);
+
+  /* definition and creation of print_instruct */
+  osThreadDef(print_instruct, StartPrintInstruct, osPriorityIdle, 0, 128);
+  print_instructHandle = osThreadCreate(osThread(print_instruct), NULL);
+>>>>>>> parent of b71a40e... Orientation printing and basic instruction
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -500,6 +526,13 @@ void testingUART() {
 	HAL_UART_Transmit(&huart1,(uint8_t*)plane_straight,sizeof(plane_straight),1000);
 	HAL_UART_Transmit(&huart1,(uint8_t*)plane_right,sizeof(plane_right),1000);
 	HAL_UART_Transmit(&huart1,(uint8_t*)plane_left,sizeof(plane_left),1000);
+	HAL_UART_Transmit(&huart1,(uint8_t*)plane_up,sizeof(plane_up),1000);
+	HAL_UART_Transmit(&huart1,(uint8_t*)plane_down,sizeof(plane_down),1000);
+	HAL_UART_Transmit(&huart1,(uint8_t*)fd_title,sizeof(fd_title),1000);
+	flightDataFirstRow(&fd_first_row, 30000, 1500);
+	flightDataSecondRow(&fd_second_row, "Do a barrel roll", 23);
+	HAL_UART_Transmit(&huart1,(uint8_t*)fd_first_row,sizeof(fd_first_row),1000);
+	HAL_UART_Transmit(&huart1,(uint8_t*)fd_second_row,sizeof(fd_second_row),1000);
 }
 
 game_mode_t testingStart(game_mode_t game_mode) {
@@ -521,6 +554,7 @@ void displayInstruction() {
 }
 /* USER CODE END 4 */
 
+<<<<<<< HEAD
 /* USER CODE BEGIN Header_StartDefaultTask */
 /**
   * @brief  Function implementing the defaultTask thread.
@@ -551,9 +585,80 @@ void StartDefaultTask(void const * argument)
 
 	// Test uart_display.h
 //	game_mode = testingStart(game_mode);
+	testingUART();
+	}
+  /* USER CODE END 5 */
+=======
+/* USER CODE BEGIN Header_StartCheckInstruct */
+/**
+  * @brief  Function implementing the check_instruct thread.
+  * @param  argument: Not used
+  * @retval None
+  */
+/* USER CODE END Header_StartCheckInstruct */
+void StartCheckInstruct(void const * argument)
+{
+  /* USER CODE BEGIN 5 */
+
+  /* Infinite loop */
+
+	for(;;)
+	{
+	osDelay(2000);
+
+
+
+
+
+
+
+
+
+
+
+
+	// Test uart_display.h
+//	game_mode = testingStart(game_mode);
 //	testingUART();
 	}
   /* USER CODE END 5 */
+}
+
+/* USER CODE BEGIN Header_StartChangeInstruct */
+/**
+* @brief Function implementing the change_instruct thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartChangeInstruct */
+void StartChangeInstruct(void const * argument)
+{
+  /* USER CODE BEGIN StartChangeInstruct */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END StartChangeInstruct */
+}
+
+/* USER CODE BEGIN Header_StartPrintInstruct */
+/**
+* @brief Function implementing the print_instruct thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartPrintInstruct */
+void StartPrintInstruct(void const * argument)
+{
+  /* USER CODE BEGIN StartPrintInstruct */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END StartPrintInstruct */
+>>>>>>> parent of b71a40e... Orientation printing and basic instruction
 }
 
 /**

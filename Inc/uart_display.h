@@ -18,7 +18,7 @@ char crash_message[] = "============= GAME OVER - You have crashed =============
 // Flight data
 char fd_title[] = "\n================== FLIGHT DATA =================";
 char fd_first_row[40] = "";
-char fd_second_row[65] = "\nHorizontal Position Left: 0 m \tHorizontal Position Left: 0 m";
+char fd_second_row[65] = "\nHorizontal Position Left: 0 m \tHorizontal Position Right: 0 m";
 char fd_third_row[70] = "";
 uint32_t magnitude;
 
@@ -36,11 +36,11 @@ void flightDataFirstRow(char *first_row, int32_t altitude, uint16_t speed) {
 void flightDataSecondtRow(char *second_row, int32_t horizontal) {
 	magnitude = abs(horizontal);
 	if (horizontal < 0) {
-		snprintf(second_row,65,"\nHorizontal Position Left: %d m \tHorizontal Position Left: 0", magnitude);
+		snprintf(second_row,65,"\nHorizontal Position Left: %d m \tHorizontal Position Right: 0 m", magnitude);
 	} else if (horizontal > 0) {
-		snprintf(second_row,65,"\nHorizontal Position Left: 0 m \tHorizontal Position Left: %d m", magnitude);
+		snprintf(second_row,65,"\nHorizontal Position Left: 0 m \tHorizontal Position Right: %d m", magnitude);
 	} else {
-		sprintf(second_row, "\nHorizontal Position Left: 0 m \tHorizontal Position Left: 0 m");
+		sprintf(second_row, "\nHorizontal Position Left: 0 m \tHorizontal Position Right: 0 m");
 	}
 }
 

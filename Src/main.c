@@ -113,7 +113,7 @@ static int32_t altitude = 0; // unit in m
 static uint16_t speed = 100; // unit in km/h
 static int32_t horizontal_position = 0; // units in m, position for left and right
 static game_mode_t game_mode = GAME_START; // Initialize game mode to GAME_START
-static board_orientation_t orientation;	// Current orientation of the board
+static board_orientation_t orientation = FLAT;	// Current orientation of the board
 /* USER CODE END 0 */
 
 /**
@@ -562,7 +562,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
     else if(GPIO_Pin != GPIO_PIN_RESET){
     	hit++;
     	HAL_GPIO_TogglePin(GPIOE, LED_R_Pin);
-    	char buff7[100];
+    	char buff7[50];
     	sprintf(buff7, "Watch out! You got hit!\n");
     	HAL_UART_Transmit(&huart1, buff7, strlen(buff7), 1000);
     }
@@ -577,6 +577,7 @@ game_mode_t pollStart(game_mode_t game_mode) {
 		HAL_UART_Transmit(&huart1,game_starting_message,sizeof(game_starting_message),1000);
 		for (uint8_t i = 0; i < 5; i++) { // Countdown to start
 			HAL_UART_Transmit(&huart1,&count_down[i],1,1000);
+			HAL_UART_Transmit(&huart1,"\n",1,1000);
 			osDelay(1000);
 		}
 		// Start other threads again

@@ -1,3 +1,5 @@
+uart_display.h:29:6:flightDataFirstRow	24	static
+uart_display.h:33:6:flightDataSecondRow	32	static
 main.c:102:5:main	48	static
 main.c:182:6:SystemClock_Config	232	static
 main.c:239:13:MX_DAC1_Init	48	static
@@ -8,8 +10,8 @@ main.c:404:13:MX_USART1_UART_Init	8	static
 main.c:437:13:MX_DMA_Init	16	static
 main.c:455:13:MX_GPIO_Init	48	static
 main.c:499:6:testingUART	8	static
-main.c:505:13:testingStart	24	static
-main.c:519:6:displayInstruction	4	static
-main.c:531:6:StartDefaultTask	16	static
-main.c:567:6:HAL_TIM_PeriodElapsedCallback	16	static
-main.c:584:6:Error_Handler	8	static,ignoring_inline_asm
+main.c:512:13:testingStart	24	static
+main.c:526:6:displayInstruction	4	static
+main.c:538:6:StartDefaultTask	16	static
+main.c:574:6:HAL_TIM_PeriodElapsedCallback	16	static
+main.c:591:6:Error_Handler	8	static,ignoring_inline_asm

@@ -23,11 +23,20 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#define ARM_MATH_CM4
+#include "arm_math.h"
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
-#include "stm32l4xx_hal.h"
+#include "stm32l475e_iot01.h"
 #include "stm32l475e_iot01_accelero.h"
+#include "stm32l475e_iot01_hsensor.h"
+#include "stm32l475e_iot01_magneto.h"
+#include "stm32l475e_iot01_psensor.h"
+#include "stm32l475e_iot01_qspi.h"
+#include "queue.h"
+
+#include "uart_display.h"
 #include "lsm6dsl.h"
 /* USER CODE END Includes */
 
@@ -57,10 +66,24 @@ TIM_HandleTypeDef htim2;
 
 UART_HandleTypeDef huart1;
 
-osThreadId datareadingTaskHandle;
 osThreadId orientationTaskHandle;
+osThreadId datareadingTaskHandle;
+osThreadId gameStartTaskHandle;
+osThreadId displayDataTaskHandle;
 /* USER CODE BEGIN PV */
+typedef enum {
+	GAME_START = 1,
+	GAME_RUNNING = 2,
+	GAME_OVER = 3,
+} game_mode_t;
 
+typedef enum {
+	TILT_UP,
+	TILT_DOWN,
+	TILT_RIGHT,
+	TILT_LEFT,
+	FLAT,
+} board_orientation_t;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -72,8 +95,10 @@ static void MX_TIM2_Init(void);
 static void MX_I2C2_Init(void);
 static void MX_QUADSPI_Init(void);
 static void MX_USART1_UART_Init(void);
-void StartDatareadingTask(void const * argument);
 void StartOrientationTask(void const * argument);
+void StartDataReadingTask(void const * argument);
+void StartGameTask(void const * argument);
+void StartDisplayDataTask(void const * argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -84,6 +109,11 @@ void StartOrientationTask(void const * argument);
 int16_t aXYZ[3];
 int16_t count = 0;
 int16_t hit = 0;
+static int32_t altitude = 0; // unit in m
+static uint16_t speed = 100; // unit in km/h
+static int32_t horizontal_position = 0; // units in m, position for left and right
+static game_mode_t game_mode = GAME_START; // Initialize game mode to GAME_START
+static board_orientation_t orientation;	// Current orientation of the board
 /* USER CODE END 0 */
 
 /**
@@ -121,6 +151,9 @@ int main(void)
   MX_QUADSPI_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
+  HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_SET); // Turn Red LED off
+
+
   //Double-tap recognition(Use single-tap to simulate the plane was hit.
   //We didn't choose single-tap recognition as it is so sensitive that very easy to be triggered by mistake.
   // Turn on the accelerometer and set the sampling rate at 416Hz
@@ -162,13 +195,21 @@ int main(void)
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
+  /* definition and creation of orientationTask */
+  osThreadDef(orientationTask, StartOrientationTask, osPriorityNormal, 0, 128);
+  orientationTaskHandle = osThreadCreate(osThread(orientationTask), NULL);
+
   /* definition and creation of datareadingTask */
-  osThreadDef(datareadingTask, StartDatareadingTask, osPriorityNormal, 0, 128);
+  osThreadDef(datareadingTask, StartDataReadingTask, osPriorityNormal, 0, 128);
   datareadingTaskHandle = osThreadCreate(osThread(datareadingTask), NULL);
 
-  /* definition and creation of orientationTask */
-  osThreadDef(orientationTask, StartOrientationTask, osPriorityIdle, 0, 128);
-  orientationTaskHandle = osThreadCreate(osThread(orientationTask), NULL);
+  /* definition and creation of gameStartTask */
+  osThreadDef(gameStartTask, StartGameTask, osPriorityNormal, 0, 128);
+  gameStartTaskHandle = osThreadCreate(osThread(gameStartTask), NULL);
+
+  /* definition and creation of displayDataTask */
+  osThreadDef(displayDataTask, StartDisplayDataTask, osPriorityIdle, 0, 128);
+  displayDataTaskHandle = osThreadCreate(osThread(displayDataTask), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -475,7 +516,6 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
-  __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_RESET);
@@ -503,12 +543,6 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(LED_G2_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PD11 */
-  GPIO_InitStruct.Pin = GPIO_PIN_11;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
-
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
@@ -521,7 +555,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
     if(GPIO_Pin == PUSH_BUTTON_Pin){
     	HAL_GPIO_TogglePin(GPIOB, LED_G2_Pin);
     	char buff8[100];
-    	sprintf(buff8, "Missel was fired successfully!\n");
+    	sprintf(buff8, "Missile was fired successfully!\n");
     	HAL_UART_Transmit(&huart1, buff8, strlen(buff8), 1000);
     }
     //Simulate when the sensor was double-tap as being hit by other missile
@@ -532,29 +566,28 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
     	sprintf(buff7, "Watch out! You got hit!\n");
     	HAL_UART_Transmit(&huart1, buff7, strlen(buff7), 1000);
     }
-    }
-
-/* USER CODE END 4 */
-
-/* USER CODE BEGIN Header_StartDatareadingTask */
-/**
-  * @brief  Function implementing the datareadingTask thread.
-  * @param  argument: Not used
-  * @retval None
-  */
-/* USER CODE END Header_StartDatareadingTask */
-void StartDatareadingTask(void const * argument)
-{
-  /* USER CODE BEGIN 5 */
-  /* Infinite loop */
-  for(;;)
-  {
-    osDelay(10);
-    //read from accelerometer
-    BSP_ACCELERO_AccGetXYZ(aXYZ);
-  }
-  /* USER CODE END 5 */
 }
+
+game_mode_t pollStart(game_mode_t game_mode) {
+	if (game_mode == GAME_START) {
+		while (user_response[0] != 's') { // Keeping displaying prompt until user sends 's'
+			HAL_UART_Transmit(&huart1,(uint8_t*)start_menu_message,sizeof(start_menu_message),1000);
+			while((HAL_OK != HAL_UART_Receive(&huart1, user_response, 1, 5000))){}
+		}
+		HAL_UART_Transmit(&huart1,game_starting_message,sizeof(game_starting_message),1000);
+		for (uint8_t i = 0; i < 5; i++) { // Countdown to start
+			HAL_UART_Transmit(&huart1,&count_down[i],1,1000);
+			osDelay(1000);
+		}
+		// Start other threads again
+
+		return GAME_RUNNING;
+	}
+}
+void displayInstruction() {
+
+}
+/* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_StartOrientationTask */
 /**
@@ -565,66 +598,167 @@ void StartDatareadingTask(void const * argument)
 /* USER CODE END Header_StartOrientationTask */
 void StartOrientationTask(void const * argument)
 {
-  /* USER CODE BEGIN StartOrientationTask */
+  /* USER CODE BEGIN 5 */
   /* Infinite loop */
   for(;;)
   {
     osDelay(100);
-    //read the value from x-axis and set tilt down condition
-    if(aXYZ[0] > 300){
-    	char buff1[100];
-    	sprintf(buff1, "Tilt down\n");
-    	HAL_UART_Transmit(&huart1, buff1, strlen(buff1), 1000);
-    }
-    //read the value from x-axis and set tilt up condition
-    if(aXYZ[0] < -300){
-    	char buff2[100];
-    	sprintf(buff2, "Tilt up\n");
-    	HAL_UART_Transmit(&huart1, buff2, strlen(buff2), 1000);
-    }
-    //read the value from y-axis and set turning left condition
-    if(aXYZ[1] > 300){
-        char buff3[100];
-        sprintf(buff3, "Turning left\n");
-        HAL_UART_Transmit(&huart1, buff3, strlen(buff3), 1000);
-        }
-    //read the value from y-axis and set turning right condition
-    if(aXYZ[1] < -300){
-        char buff4[100];
-        sprintf(buff4, "Turning right\n");
-        HAL_UART_Transmit(&huart1, buff4, strlen(buff4), 1000);
-        }
-    //Set the condition for the board droped to ground(free-fall)
-    if(aXYZ[1] > -500 && aXYZ[1] < 500 && aXYZ[0] > -500 && aXYZ[0] < 500 && aXYZ[2] > -500 && aXYZ[2] < 500){
-            if(count == 1){
-            	char buff5[100];
-            	sprintf(buff5, "Crashed! Press the reset button to restart!\n");
-            	HAL_UART_Transmit(&huart1, buff5, strlen(buff5), 1000);
-            	count = 0;
-            	break;
-            }
-            else{
-            	count++;
-            }
-            }
-    //If we double-tap(simulate the plane was hit) the board for 5 times,
-    //the status of the board became game over.
-    if(hit == 5){
-    	char buff6[100];
-    	sprintf(buff6, "Was shot down! Press the reset button to restart!\n");
-    	HAL_UART_Transmit(&huart1, buff6, strlen(buff6), 1000);
-        hit = 0;
-    	break;
-    }
-    //If the board is placed horizontally
-    if(aXYZ[1] > -200 && aXYZ[1] < 100 && aXYZ[0] > -200 && aXYZ[0] < 200 && aXYZ[2] > 800 && aXYZ[2] < 1200){
-    	char buff9[100];
-    	sprintf(buff9, "Smooth flight\n");
-    	HAL_UART_Transmit(&huart1, buff9, strlen(buff9), 1000);
+    while(game_mode == GAME_START || game_mode == GAME_OVER) {
+    	osDelay(100);
     }
 
+    //read from accelerometer
+    //read the value from x-axis and set tilt down condition
+	if(aXYZ[0] > 300){
+		altitude -= (int)speed*(1/3.6);
+		orientation = TILT_DOWN;
+	}
+	//read the value from x-axis and set tilt up condition
+	if(aXYZ[0] < -300){
+		altitude += (int)speed*(1/3.6);
+		orientation = TILT_UP;
+	}
+	//read the value from y-axis and set turning left condition
+	if(aXYZ[1] > 300){
+		horizontal_position -= (int)(speed/20);
+		orientation = TILT_LEFT;
+	}
+	//read the value from y-axis and set turning right condition
+	if(aXYZ[1] < -300){
+		horizontal_position += (int)(speed/20);
+		orientation = TILT_RIGHT;
+	}
+	//If the board is placed horizontally
+	if(aXYZ[1] > -200 && aXYZ[1] < 100 && aXYZ[0] > -200 && aXYZ[0] < 200 && aXYZ[2] > 800 && aXYZ[2] < 1200){
+		orientation = FLAT;
+	}
+	if (altitude < 0) {
+		game_mode = GAME_OVER;
+		HAL_UART_Transmit(&huart1,(uint8_t*)crash_message,sizeof(crash_message),1000);
+	}
+
+	// Temp disable until we know what to do with it
+	//Set the condition for the board droped to ground(free-fall)
+//	if(aXYZ[1] > -500 && aXYZ[1] < 500 && aXYZ[0] > -500 && aXYZ[0] < 500 && aXYZ[2] > -500 && aXYZ[2] < 500){
+//		if(count == 1){
+//			char buff5[100];
+//			sprintf(buff5, "Crashed! Press the reset button to restart!\n");
+//			HAL_UART_Transmit(&huart1, buff5, strlen(buff5), 1000);
+//			count = 0;
+//			break;
+//		}
+//		else{
+//			count++;
+//		}
+//	}
+	//If we double-tap(simulate the plane was hit) the board for 5 times,
+	//the status of the board became game over.
+	if(hit == 5){
+		char buff6[100];
+		sprintf(buff6, "Was shot down! Press the reset button to restart!\n");
+		HAL_UART_Transmit(&huart1, buff6, strlen(buff6), 1000);
+		hit = 0;
+		break;
+	}
+
+
   }
-  /* USER CODE END StartOrientationTask */
+  /* USER CODE END 5 */
+}
+
+/* USER CODE BEGIN Header_StartDataReadingTask */
+/**
+* @brief Function implementing the datareadingTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartDataReadingTask */
+void StartDataReadingTask(void const * argument)
+{
+  /* USER CODE BEGIN StartDataReadingTask */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(10);
+    while(game_mode == GAME_START || game_mode == GAME_OVER) {
+    	osDelay(50);
+    }
+    BSP_ACCELERO_AccGetXYZ(aXYZ);
+  }
+  /* USER CODE END StartDataReadingTask */
+}
+
+/* USER CODE BEGIN Header_StartGameTask */
+/**
+* @brief Function implementing the gameStartTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartGameTask */
+void StartGameTask(void const * argument)
+{
+  /* USER CODE BEGIN StartGameTask */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1000);
+    while(game_mode == GAME_RUNNING || game_mode == GAME_OVER) {
+        osDelay(100);
+    }
+    game_mode = pollStart(game_mode);
+  }
+  /* USER CODE END StartGameTask */
+}
+
+/* USER CODE BEGIN Header_StartDisplayDataTask */
+/**
+* @brief Function implementing the displayDataTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartDisplayDataTask */
+void StartDisplayDataTask(void const * argument)
+{
+  /* USER CODE BEGIN StartDisplayDataTask */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1000);
+    while(game_mode == GAME_START || game_mode == GAME_OVER) {
+    	osDelay(100);
+    }
+    switch (orientation) {
+		case TILT_UP: {
+			HAL_UART_Transmit(&huart1,(uint8_t*)plane_up,sizeof(plane_up),1000);
+			break;
+		}
+		case TILT_DOWN: {
+			HAL_UART_Transmit(&huart1,(uint8_t*)plane_down,sizeof(plane_down),1000);
+			break;
+		}
+
+		case TILT_RIGHT: {
+			HAL_UART_Transmit(&huart1,(uint8_t*)plane_right,sizeof(plane_right),1000);
+			break;
+		}
+		case TILT_LEFT: {
+			HAL_UART_Transmit(&huart1,(uint8_t*)plane_left,sizeof(plane_left),1000);
+			break;
+		}
+		case FLAT: {
+			HAL_UART_Transmit(&huart1,(uint8_t*)plane_straight,sizeof(plane_straight),1000);
+			break;
+		}
+    }
+	HAL_UART_Transmit(&huart1,(uint8_t*)fd_title,sizeof(fd_title),1000);
+	flightDataFirstRow(&fd_first_row, altitude, speed);
+	flightDataSecondtRow(&fd_second_row, horizontal_position);
+	flightDataThirdRow(&fd_third_row, "Do a barrel roll", 23);
+	HAL_UART_Transmit(&huart1,(uint8_t*)fd_first_row,sizeof(fd_first_row),1000);
+	HAL_UART_Transmit(&huart1,(uint8_t*)fd_second_row,sizeof(fd_second_row),1000);
+	HAL_UART_Transmit(&huart1,(uint8_t*)fd_third_row,sizeof(fd_third_row),1000);
+  }
+  /* USER CODE END StartDisplayDataTask */
 }
 
 /**

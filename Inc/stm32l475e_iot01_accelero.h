@@ -1,8 +1,8 @@
 /**
   ******************************************************************************
-  * @file    stm32l475e_iot01_psensor.h
+  * @file    stm32l475e_iot01_accelero.h
   * @author  MCD Application Team
-  * @brief   This file provides a set of functions needed to manage the pressure sensor
+  * @brief   This file provides a set of functions needed to manage the accelerometer sensor
   ******************************************************************************
   * @attention
   *
@@ -18,8 +18,8 @@
   */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __STM32L475E_IOT01_PSENSOR_H
-#define __STM32L475E_IOT01_PSENSOR_H
+#ifndef __STM32L475E_IOT01_ACCELERO_H
+#define __STM32L475E_IOT01_ACCELERO_H
 
 #ifdef __cplusplus
  extern "C" {
@@ -27,45 +27,44 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32l475e_iot01.h"
-#include "../Components/lps22hb/lps22hb.h"
-
+/* Include Accelero component driver */
+#include "lsm6dsl.h"
+   
 /** @addtogroup BSP
   * @{
-  */ 
+  */
 
 /** @addtogroup STM32L475E_IOT01
   * @{
   */
-
-/** @addtogroup STM32L475E_IOT01_PRESSURE 
+      
+/** @addtogroup STM32L475E_IOT01_ACCELERO
   * @{
-  */
-   
-/* Exported types ------------------------------------------------------------*/
-/** @defgroup STM32L475E_IOT01_PRESSURE_Exported_Types PRESSURE Exported Types
-  * @{
-  */
-   
-/** 
-  * @brief  PSENSOR Status  
   */ 
-typedef enum
+   
+/** @defgroup STM32L475_DISCOVERY_ACCELERO_Exported_Types ACCELERO Exported Types
+  * @{
+  */
+typedef enum 
 {
-  PSENSOR_OK = 0,
-  PSENSOR_ERROR
-}PSENSOR_Status_TypDef;
+  ACCELERO_OK = 0,
+  ACCELERO_ERROR = 1,
+  ACCELERO_TIMEOUT = 2
+} 
+ACCELERO_StatusTypeDef;
 
 /**
   * @}
   */
 
-/** @defgroup STM32L475E_IOT01_PRESSURE_Exported_Functions PRESSURE Exported Functions
+/** @defgroup STM32L475E_IOT01_ACCELERO_Exported_Functions ACCELERO Exported Functions
   * @{
   */
 /* Sensor Configuration Functions */
-uint32_t BSP_PSENSOR_Init(void);
-uint8_t  BSP_PSENSOR_ReadID(void);
-float    BSP_PSENSOR_ReadPressure(void);
+ACCELERO_StatusTypeDef BSP_ACCELERO_Init(void);
+void BSP_ACCELERO_DeInit(void);
+void BSP_ACCELERO_LowPower(uint16_t status); /* 0 Means Disable Low Power Mode, otherwise Low Power Mode is enabled */
+void BSP_ACCELERO_AccGetXYZ(int16_t *pDataXYZ);
 /**
   * @}
   */
@@ -81,11 +80,10 @@ float    BSP_PSENSOR_ReadPressure(void);
 /**
   * @}
   */
-
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __STM32L475E_IOT01_PSENSOR_H */
+#endif /* __STM32L475E_IOT01_ACCELERO_H */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

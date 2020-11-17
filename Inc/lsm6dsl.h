@@ -26,8 +26,8 @@ extern "C" {
 #endif
   
 /* Includes ------------------------------------------------------------------*/
-#include "../Common/accelero.h"
-#include "../Common/gyro.h"  
+#include "accelero.h"
+#include "gyro.h"
 
 /** @addtogroup BSP
   * @{
@@ -194,10 +194,10 @@ extern "C" {
 #define LSM6DSL_ACC_GYRO_MAG_OFFZ_H                   0x32
 
 /* Accelero Full_ScaleSelection */
-#define LSM6DSL_ACC_FULLSCALE_2G          ((uint8_t)0x00) /*!< ±2 g */
-#define LSM6DSL_ACC_FULLSCALE_4G          ((uint8_t)0x08) /*!< ±4 g */
-#define LSM6DSL_ACC_FULLSCALE_8G          ((uint8_t)0x0C) /*!< ±8 g */
-#define LSM6DSL_ACC_FULLSCALE_16G         ((uint8_t)0x04) /*!< ±16 g */
+#define LSM6DSL_ACC_FULLSCALE_2G          ((uint8_t)0x00) /*!< ï¿½2 g */
+#define LSM6DSL_ACC_FULLSCALE_4G          ((uint8_t)0x08) /*!< ï¿½4 g */
+#define LSM6DSL_ACC_FULLSCALE_8G          ((uint8_t)0x0C) /*!< ï¿½8 g */
+#define LSM6DSL_ACC_FULLSCALE_16G         ((uint8_t)0x04) /*!< ï¿½16 g */
 
 /* Accelero Full Scale Sensitivity */
 #define LSM6DSL_ACC_SENSITIVITY_2G     ((float)0.061f)  /*!< accelerometer sensitivity with 2 g full scale  [mgauss/LSB] */

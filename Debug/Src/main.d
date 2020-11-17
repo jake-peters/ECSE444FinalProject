@@ -49,28 +49,8 @@ Src/main.o: ../Src/main.c ../Inc/main.h \
  ../Middlewares/Third_Party/FreeRTOS/Source/include/queue.h \
  ../Middlewares/Third_Party/FreeRTOS/Source/include/event_groups.h \
  ../Middlewares/Third_Party/FreeRTOS/Source/include/timers.h \
- ../Inc/arm_math.h ../Drivers/CMSIS/Include/cmsis_compiler.h \
- ../Drivers/BSP/B-L475E-IOT01/stm32l475e_iot01.h \
- ../Drivers/BSP/B-L475E-IOT01/stm32l475e_iot01_accelero.h \
- ../Drivers/BSP/B-L475E-IOT01/stm32l475e_iot01.h \
- ../Drivers/BSP/B-L475E-IOT01/../Components/lsm6dsl/lsm6dsl.h \
- ../Drivers/BSP/B-L475E-IOT01/../Components/lsm6dsl/../Common/accelero.h \
- ../Drivers/BSP/B-L475E-IOT01/../Components/lsm6dsl/../Common/gyro.h \
- ../Drivers/BSP/B-L475E-IOT01/stm32l475e_iot01_hsensor.h \
- ../Drivers/BSP/B-L475E-IOT01/../Components/hts221/hts221.h \
- ../Drivers/BSP/B-L475E-IOT01/../Components/hts221/../Common/hsensor.h \
- ../Drivers/BSP/B-L475E-IOT01/../Components/hts221/../Common/tsensor.h \
- ../Drivers/BSP/B-L475E-IOT01/stm32l475e_iot01_magneto.h \
- ../Drivers/BSP/B-L475E-IOT01/../Components/lis3mdl/lis3mdl.h \
- ../Drivers/BSP/B-L475E-IOT01/../Components/lis3mdl/../Common/magneto.h \
- ../Drivers/BSP/B-L475E-IOT01/stm32l475e_iot01_psensor.h \
- ../Drivers/BSP/B-L475E-IOT01/../Components/lps22hb/lps22hb.h \
- ../Drivers/BSP/B-L475E-IOT01/../Components/lps22hb/../Common/psensor.h \
- ../Drivers/BSP/B-L475E-IOT01/../Components/lps22hb/../Common/tsensor.h \
- ../Drivers/BSP/B-L475E-IOT01/stm32l475e_iot01_qspi.h \
- ../Inc/../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal.h \
- ../Drivers/BSP/B-L475E-IOT01/../Components/mx25r6435f/mx25r6435f.h \
- ../Inc/uart_display.h
+ ../Inc/stm32l475e_iot01_accelero.h ../Inc/stm32l475e_iot01.h \
+ ../Inc/lsm6dsl.h ../Inc/accelero.h ../Inc/gyro.h ../Inc/lsm6dsl.h
 
 ../Inc/main.h:
 
@@ -174,48 +154,14 @@ Src/main.o: ../Src/main.c ../Inc/main.h \
 
 ../Middlewares/Third_Party/FreeRTOS/Source/include/timers.h:
 
-../Inc/arm_math.h:
+../Inc/stm32l475e_iot01_accelero.h:
 
-../Drivers/CMSIS/Include/cmsis_compiler.h:
+../Inc/stm32l475e_iot01.h:
 
-../Drivers/BSP/B-L475E-IOT01/stm32l475e_iot01.h:
+../Inc/lsm6dsl.h:
 
-../Drivers/BSP/B-L475E-IOT01/stm32l475e_iot01_accelero.h:
+../Inc/accelero.h:
 
-../Drivers/BSP/B-L475E-IOT01/stm32l475e_iot01.h:
+../Inc/gyro.h:
 
-../Drivers/BSP/B-L475E-IOT01/../Components/lsm6dsl/lsm6dsl.h:
-
-../Drivers/BSP/B-L475E-IOT01/../Components/lsm6dsl/../Common/accelero.h:
-
-../Drivers/BSP/B-L475E-IOT01/../Components/lsm6dsl/../Common/gyro.h:
-
-../Drivers/BSP/B-L475E-IOT01/stm32l475e_iot01_hsensor.h:
-
-../Drivers/BSP/B-L475E-IOT01/../Components/hts221/hts221.h:
-
-../Drivers/BSP/B-L475E-IOT01/../Components/hts221/../Common/hsensor.h:
-
-../Drivers/BSP/B-L475E-IOT01/../Components/hts221/../Common/tsensor.h:
-
-../Drivers/BSP/B-L475E-IOT01/stm32l475e_iot01_magneto.h:
-
-../Drivers/BSP/B-L475E-IOT01/../Components/lis3mdl/lis3mdl.h:
-
-../Drivers/BSP/B-L475E-IOT01/../Components/lis3mdl/../Common/magneto.h:
-
-../Drivers/BSP/B-L475E-IOT01/stm32l475e_iot01_psensor.h:
-
-../Drivers/BSP/B-L475E-IOT01/../Components/lps22hb/lps22hb.h:
-
-../Drivers/BSP/B-L475E-IOT01/../Components/lps22hb/../Common/psensor.h:
-
-../Drivers/BSP/B-L475E-IOT01/../Components/lps22hb/../Common/tsensor.h:
-
-../Drivers/BSP/B-L475E-IOT01/stm32l475e_iot01_qspi.h:
-
-../Inc/../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal.h:
-
-../Drivers/BSP/B-L475E-IOT01/../Components/mx25r6435f/mx25r6435f.h:
-
-../Inc/uart_display.h:
+../Inc/lsm6dsl.h:

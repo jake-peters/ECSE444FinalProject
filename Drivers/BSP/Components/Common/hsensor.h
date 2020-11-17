@@ -1,8 +1,9 @@
 /**
   ******************************************************************************
-  * @file    stm32l475e_iot01_gyro.h
+  * @file    hsensor.h
   * @author  MCD Application Team
-  * @brief   This file contains definitions for the stm32l475e_iot01_gyro.c
+  * @brief   This header file contains the functions prototypes for the
+  *          Humidity Sensor driver.
   ******************************************************************************
   * @attention
   *
@@ -18,52 +19,41 @@
   */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __STM32L475E_IOT01_GYRO_H
-#define __STM32L475E_IOT01_GYRO_H
+#ifndef __HSENSOR_H
+#define __HSENSOR_H
 
 #ifdef __cplusplus
  extern "C" {
 #endif
 
 /* Includes ------------------------------------------------------------------*/
-#include "stm32l475e_iot01.h"
-/* Include Gyro component driver */
-#include "lsm6dsl.h"
+#include <stdint.h>
 
 /** @addtogroup BSP
   * @{
   */
 
-/** @addtogroup STM32L475E_IOT01
+/** @addtogroup Components
   * @{
   */
-      
-/** @addtogroup STM32L475E_IOT01_GYROSCOPE 
+    
+/** @addtogroup HSENSOR
+  * @{
+  */
+
+/** @defgroup HSENSOR_Exported_Types
   * @{
   */ 
-   
-/** @defgroup STM32L475_IOT01_GYROSCOPE_Exported_Constants GYROSCOPE Exported Constants
+
+/** @defgroup HSENSOR_Driver_structure  Humidity Sensor Driver structure
   * @{
   */
-typedef enum 
+typedef struct
 {
-  GYRO_OK = 0,
-  GYRO_ERROR = 1,
-  GYRO_TIMEOUT = 2
-} 
-GYRO_StatusTypeDef;
-
-/**
-  * @}
-  */
-
-/** @defgroup STM32L475E_IOT01_GYROSCOPE_Exported_Functions GYROSCOPE Exported Functions
-  * @{
-  */  
-uint8_t BSP_GYRO_Init(void); 
-void BSP_GYRO_DeInit(void);
-void BSP_GYRO_LowPower(uint16_t status);   /* 0 Means Disable Low Power Mode, otherwise Low Power Mode is enabled */
-void BSP_GYRO_GetXYZ(float* pfData);
+  void       (*Init)(uint16_t); 
+  uint8_t    (*ReadID)(uint16_t);
+  float      (*ReadHumidity)(uint16_t); 
+}HSENSOR_DrvTypeDef;
 /**
   * @}
   */
@@ -79,10 +69,15 @@ void BSP_GYRO_GetXYZ(float* pfData);
 /**
   * @}
   */
+
+/**
+  * @}
+  */
+
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __STM32L475E_IOT01_GYRO_H */
+#endif /* __HSENSOR_H */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

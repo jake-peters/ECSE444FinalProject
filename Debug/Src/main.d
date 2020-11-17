@@ -49,8 +49,12 @@ Src/main.o: ../Src/main.c ../Inc/main.h \
  ../Middlewares/Third_Party/FreeRTOS/Source/include/queue.h \
  ../Middlewares/Third_Party/FreeRTOS/Source/include/event_groups.h \
  ../Middlewares/Third_Party/FreeRTOS/Source/include/timers.h \
- ../Inc/stm32l475e_iot01_accelero.h ../Inc/stm32l475e_iot01.h \
- ../Inc/lsm6dsl.h ../Inc/accelero.h ../Inc/gyro.h ../Inc/lsm6dsl.h
+ ../Drivers/BSP/B-L475E-IOT01/stm32l475e_iot01_accelero.h \
+ ../Drivers/BSP/B-L475E-IOT01/stm32l475e_iot01.h \
+ ../Drivers/BSP/B-L475E-IOT01/../Components/lsm6dsl/lsm6dsl.h \
+ ../Drivers/BSP/B-L475E-IOT01/../Components/lsm6dsl/../Common/accelero.h \
+ ../Drivers/BSP/B-L475E-IOT01/../Components/lsm6dsl/../Common/gyro.h \
+ ../Drivers/BSP/Components/lsm6dsl/lsm6dsl.h
 
 ../Inc/main.h:
 
@@ -154,14 +158,14 @@ Src/main.o: ../Src/main.c ../Inc/main.h \
 
 ../Middlewares/Third_Party/FreeRTOS/Source/include/timers.h:
 
-../Inc/stm32l475e_iot01_accelero.h:
+../Drivers/BSP/B-L475E-IOT01/stm32l475e_iot01_accelero.h:
 
-../Inc/stm32l475e_iot01.h:
+../Drivers/BSP/B-L475E-IOT01/stm32l475e_iot01.h:
 
-../Inc/lsm6dsl.h:
+../Drivers/BSP/B-L475E-IOT01/../Components/lsm6dsl/lsm6dsl.h:
 
-../Inc/accelero.h:
+../Drivers/BSP/B-L475E-IOT01/../Components/lsm6dsl/../Common/accelero.h:
 
-../Inc/gyro.h:
+../Drivers/BSP/B-L475E-IOT01/../Components/lsm6dsl/../Common/gyro.h:
 
-../Inc/lsm6dsl.h:
+../Drivers/BSP/Components/lsm6dsl/lsm6dsl.h:

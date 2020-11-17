@@ -15,6 +15,11 @@ RM := rm -rf
 -include Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/subdir.mk
 -include Middlewares/Third_Party/FreeRTOS/Source/subdir.mk
 -include Drivers/STM32L4xx_HAL_Driver/Src/subdir.mk
+-include Drivers/BSP/Components/lsm6dsl/subdir.mk
+-include Drivers/BSP/Components/lps22hb/subdir.mk
+-include Drivers/BSP/Components/lis3mdl/subdir.mk
+-include Drivers/BSP/Components/hts221/subdir.mk
+-include Drivers/BSP/B-L475E-IOT01/subdir.mk
 -include subdir.mk
 -include objects.mk
 

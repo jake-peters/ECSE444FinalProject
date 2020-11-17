@@ -1,5 +1,6 @@
-Src/stm32l475e_iot01_accelero.o: ../Src/stm32l475e_iot01_accelero.c \
- ../Inc/stm32l475e_iot01_accelero.h ../Inc/stm32l475e_iot01.h \
+Drivers/BSP/B-L475E-IOT01/stm32l475e_iot01.o: \
+ ../Drivers/BSP/B-L475E-IOT01/stm32l475e_iot01.c \
+ ../Drivers/BSP/B-L475E-IOT01/stm32l475e_iot01.h \
  ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal.h \
  ../Inc/stm32l4xx_hal_conf.h \
  ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_rcc.h \
@@ -32,12 +33,9 @@ Src/stm32l475e_iot01_accelero.o: ../Src/stm32l475e_iot01_accelero.c \
  ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_tim.h \
  ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_tim_ex.h \
  ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_uart.h \
- ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_uart_ex.h \
- ../Inc/lsm6dsl.h ../Inc/accelero.h ../Inc/gyro.h
+ ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_uart_ex.h
 
-../Inc/stm32l475e_iot01_accelero.h:
-
-../Inc/stm32l475e_iot01.h:
+../Drivers/BSP/B-L475E-IOT01/stm32l475e_iot01.h:
 
 ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal.h:
 
@@ -104,9 +102,3 @@ Src/stm32l475e_iot01_accelero.o: ../Src/stm32l475e_iot01_accelero.c \
 ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_uart.h:
 
 ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_uart_ex.h:
-
-../Inc/lsm6dsl.h:
-
-../Inc/accelero.h:
-
-../Inc/gyro.h:

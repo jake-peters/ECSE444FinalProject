@@ -101,6 +101,7 @@ void StartOrientationTask(void const * argument);
 int16_t aXYZ[3];
 int16_t count = 0;
 int16_t hit = 0;
+uint8_t boole = 0;
 static game_mode_t game_mode = GAME_START; // Initialize game mode to GAME_START
 /* USER CODE END 0 */
 

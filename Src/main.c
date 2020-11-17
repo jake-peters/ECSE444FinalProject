@@ -37,16 +37,12 @@
 #include "queue.h"
 
 #include "uart_display.h"
+#include "lsm6dsl.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-// Define what state the game is in
-typedef enum {
-	GAME_START = 1,
-	GAME_RUNNING = 2,
-	GAME_OVER = 3,
-} game_mode_t;
+
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -70,15 +66,16 @@ TIM_HandleTypeDef htim2;
 
 UART_HandleTypeDef huart1;
 
-<<<<<<< HEAD
-osThreadId defaultTaskHandle;
-=======
-osThreadId check_instructHandle;
-osThreadId change_instructHandle;
-osThreadId print_instructHandle;
->>>>>>> parent of b71a40e... Orientation printing and basic instruction
+
+osThreadId datareadingTaskHandle;
+osThreadId orientationTaskHandle;
+
 /* USER CODE BEGIN PV */
-static game_mode_t game_mode = GAME_START; // Initialize game mode to GAME_START
+typedef enum {
+	GAME_START = 1,
+	GAME_RUNNING = 2,
+	GAME_OVER = 3,
+} game_mode_t;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -90,13 +87,10 @@ static void MX_TIM2_Init(void);
 static void MX_I2C2_Init(void);
 static void MX_QUADSPI_Init(void);
 static void MX_USART1_UART_Init(void);
-<<<<<<< HEAD
-void StartDefaultTask(void const * argument);
-=======
-void StartCheckInstruct(void const * argument);
-void StartChangeInstruct(void const * argument);
-void StartPrintInstruct(void const * argument);
->>>>>>> parent of b71a40e... Orientation printing and basic instruction
+
+void StartDatareadingTask(void const * argument);
+void StartOrientationTask(void const * argument);
+
 
 /* USER CODE BEGIN PFP */
 
@@ -104,7 +98,10 @@ void StartPrintInstruct(void const * argument);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+int16_t aXYZ[3];
+int16_t count = 0;
+int16_t hit = 0;
+static game_mode_t game_mode = GAME_START; // Initialize game mode to GAME_START
 /* USER CODE END 0 */
 
 /**
@@ -123,7 +120,7 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-
+  BSP_ACCELERO_Init();
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -142,9 +139,31 @@ int main(void)
   MX_QUADSPI_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
-
   HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_SET); // Turn Red LED off
 
+
+  //Double-tap recognition(Use single-tap to simulate the plane was hit.
+  //We didn't choose single-tap recognition as it is so sensitive that very easy to be triggered by mistake.
+  // Turn on the accelerometer and set the sampling rate at 416Hz
+  SENSOR_IO_Write(LSM6DSL_ACC_GYRO_I2C_ADDRESS_LOW, LSM6DSL_ACC_GYRO_CTRL1_XL, 0x60);
+  //Enable interrupts and tap detection on X, Y, Z axis
+  SENSOR_IO_Write(LSM6DSL_ACC_GYRO_I2C_ADDRESS_LOW, LSM6DSL_ACC_GYRO_TAP_CFG1, 0x8E);
+  //Set the value of the tap threshold at 562.5mg.
+  SENSOR_IO_Write(LSM6DSL_ACC_GYRO_I2C_ADDRESS_LOW, LSM6DSL_ACC_GYRO_TAP_THS_6D, 0x8C);
+  //Set the values of Quiet and Shock time windows
+  SENSOR_IO_Write(LSM6DSL_ACC_GYRO_I2C_ADDRESS_LOW, LSM6DSL_ACC_GYRO_INT_DUR2, 0x7F);
+  //Enable the single-tap recogonition
+  SENSOR_IO_Write(LSM6DSL_ACC_GYRO_I2C_ADDRESS_LOW, LSM6DSL_ACC_GYRO_WAKE_UP_THS, 0x80);
+  //Let the interrupt generated diven to INT1 pin
+  SENSOR_IO_Write(LSM6DSL_ACC_GYRO_I2C_ADDRESS_LOW, LSM6DSL_ACC_GYRO_MD1_CFG, 0x08);
+
+
+  //free-fall detection using resisters but not work well.
+//  SENSOR_IO_Write(LSM6DSL_ACC_GYRO_I2C_ADDRESS_LOW, LSM6DSL_ACC_GYRO_CTRL1_XL, 0x60);
+//  SENSOR_IO_Write(LSM6DSL_ACC_GYRO_I2C_ADDRESS_LOW, LSM6DSL_ACC_GYRO_TAP_CFG1, 0x81);
+//  SENSOR_IO_Write(LSM6DSL_ACC_GYRO_I2C_ADDRESS_LOW, LSM6DSL_ACC_GYRO_WAKE_UP_DUR, 0x00);
+//  SENSOR_IO_Write(LSM6DSL_ACC_GYRO_I2C_ADDRESS_LOW, LSM6DSL_ACC_GYRO_FREE_FALL, 0x0F);
+//  SENSOR_IO_Write(LSM6DSL_ACC_GYRO_I2C_ADDRESS_LOW, LSM6DSL_ACC_GYRO_MD1_CFG, 0x10);
   /* USER CODE END 2 */
 
   /* USER CODE BEGIN RTOS_MUTEX */
@@ -164,23 +183,15 @@ int main(void)
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
-<<<<<<< HEAD
-  /* definition and creation of defaultTask */
-  osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 128);
-  defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
-=======
-  /* definition and creation of check_instruct */
-  osThreadDef(check_instruct, StartCheckInstruct, osPriorityNormal, 0, 128);
-  check_instructHandle = osThreadCreate(osThread(check_instruct), NULL);
 
-  /* definition and creation of change_instruct */
-  osThreadDef(change_instruct, StartChangeInstruct, osPriorityIdle, 0, 128);
-  change_instructHandle = osThreadCreate(osThread(change_instruct), NULL);
+  /* definition and creation of datareadingTask */
+  osThreadDef(datareadingTask, StartDatareadingTask, osPriorityNormal, 0, 128);
+  datareadingTaskHandle = osThreadCreate(osThread(datareadingTask), NULL);
 
-  /* definition and creation of print_instruct */
-  osThreadDef(print_instruct, StartPrintInstruct, osPriorityIdle, 0, 128);
-  print_instructHandle = osThreadCreate(osThread(print_instruct), NULL);
->>>>>>> parent of b71a40e... Orientation printing and basic instruction
+  /* definition and creation of orientationTask */
+  osThreadDef(orientationTask, StartOrientationTask, osPriorityIdle, 0, 128);
+  orientationTaskHandle = osThreadCreate(osThread(orientationTask), NULL);
+
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -487,6 +498,7 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
+  __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_RESET);
@@ -514,6 +526,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(LED_G2_GPIO_Port, &GPIO_InitStruct);
 
+  /*Configure GPIO pin : PD11 */
+  GPIO_InitStruct.Pin = GPIO_PIN_11;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
@@ -521,6 +539,24 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
+	//Simulate the push-button press as missile was fired
+    if(GPIO_Pin == PUSH_BUTTON_Pin){
+    	HAL_GPIO_TogglePin(GPIOB, LED_G2_Pin);
+    	char buff8[100];
+    	sprintf(buff8, "Missel was fired successfully!\n");
+    	HAL_UART_Transmit(&huart1, buff8, strlen(buff8), 1000);
+    }
+    //Simulate when the sensor was double-tap as being hit by other missile
+    else if(GPIO_Pin != GPIO_PIN_RESET){
+    	hit++;
+    	HAL_GPIO_TogglePin(GPIOE, LED_R_Pin);
+    	char buff7[100];
+    	sprintf(buff7, "Watch out! You got hit!\n");
+    	HAL_UART_Transmit(&huart1, buff7, strlen(buff7), 1000);
+    }
+    }
+
 
 void testingUART() {
 	HAL_UART_Transmit(&huart1,(uint8_t*)plane_straight,sizeof(plane_straight),1000);
@@ -554,112 +590,99 @@ void displayInstruction() {
 }
 /* USER CODE END 4 */
 
-<<<<<<< HEAD
-/* USER CODE BEGIN Header_StartDefaultTask */
+
 /**
-  * @brief  Function implementing the defaultTask thread.
+  * @brief  Function implementing the datareadingTask thread.
   * @param  argument: Not used
   * @retval None
   */
-/* USER CODE END Header_StartDefaultTask */
-void StartDefaultTask(void const * argument)
+/* USER CODE END Header_StartDatareadingTask */
+void StartDatareadingTask(void const * argument)
 {
   /* USER CODE BEGIN 5 */
-
-  /* Infinite loop */
-
-	for(;;)
-	{
-	osDelay(2000);
-
-
-
-
-
-
-
-
-
-
-
-
-	// Test uart_display.h
-//	game_mode = testingStart(game_mode);
-	testingUART();
-	}
-  /* USER CODE END 5 */
-=======
-/* USER CODE BEGIN Header_StartCheckInstruct */
-/**
-  * @brief  Function implementing the check_instruct thread.
-  * @param  argument: Not used
-  * @retval None
-  */
-/* USER CODE END Header_StartCheckInstruct */
-void StartCheckInstruct(void const * argument)
-{
-  /* USER CODE BEGIN 5 */
-
-  /* Infinite loop */
-
-	for(;;)
-	{
-	osDelay(2000);
-
-
-
-
-
-
-
-
-
-
-
-
-	// Test uart_display.h
-//	game_mode = testingStart(game_mode);
-//	testingUART();
-	}
-  /* USER CODE END 5 */
-}
-
-/* USER CODE BEGIN Header_StartChangeInstruct */
-/**
-* @brief Function implementing the change_instruct thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_StartChangeInstruct */
-void StartChangeInstruct(void const * argument)
-{
-  /* USER CODE BEGIN StartChangeInstruct */
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1);
+    osDelay(10);
+    //read from accelerometer
+    BSP_ACCELERO_AccGetXYZ(aXYZ);
   }
-  /* USER CODE END StartChangeInstruct */
+  /* USER CODE END 5 */
 }
 
-/* USER CODE BEGIN Header_StartPrintInstruct */
+/* USER CODE BEGIN Header_StartOrientationTask */
 /**
-* @brief Function implementing the print_instruct thread.
+* @brief Function implementing the orientationTask thread.
 * @param argument: Not used
 * @retval None
 */
-/* USER CODE END Header_StartPrintInstruct */
-void StartPrintInstruct(void const * argument)
+/* USER CODE END Header_StartOrientationTask */
+void StartOrientationTask(void const * argument)
 {
-  /* USER CODE BEGIN StartPrintInstruct */
+  /* USER CODE BEGIN StartOrientationTask */
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1);
-  }
-  /* USER CODE END StartPrintInstruct */
->>>>>>> parent of b71a40e... Orientation printing and basic instruction
+    osDelay(100);
+    //read the value from x-axis and set tilt down condition
+    if(aXYZ[0] > 300){
+    	char buff1[100];
+    	sprintf(buff1, "Tilt down\n");
+    	HAL_UART_Transmit(&huart1, buff1, strlen(buff1), 1000);
+    }
+    //read the value from x-axis and set tilt up condition
+    if(aXYZ[0] < -300){
+    	char buff2[100];
+    	sprintf(buff2, "Tilt up\n");
+    	HAL_UART_Transmit(&huart1, buff2, strlen(buff2), 1000);
+    }
+    //read the value from y-axis and set turning left condition
+    if(aXYZ[1] > 300){
+        char buff3[100];
+        sprintf(buff3, "Turning left\n");
+        HAL_UART_Transmit(&huart1, buff3, strlen(buff3), 1000);
+        }
+    //read the value from y-axis and set turning right condition
+    if(aXYZ[1] < -300){
+        char buff4[100];
+        sprintf(buff4, "Turning right\n");
+        HAL_UART_Transmit(&huart1, buff4, strlen(buff4), 1000);
+        }
+    //Set the condition for the board droped to ground(free-fall)
+    if(aXYZ[1] > -500 && aXYZ[1] < 500 && aXYZ[0] > -500 && aXYZ[0] < 500 && aXYZ[2] > -500 && aXYZ[2] < 500){
+            if(count == 1){
+            	char buff5[100];
+            	sprintf(buff5, "Crashed! Press the reset button to restart!\n");
+            	HAL_UART_Transmit(&huart1, buff5, strlen(buff5), 1000);
+            	count = 0;
+            	break;
+            }
+            else{
+            	count++;
+            }
+            }
+    //If we double-tap(simulate the plane was hit) the board for 5 times,
+    //the status of the board became game over.
+    if(hit == 5){
+    	char buff6[100];
+    	sprintf(buff6, "Was shot down! Press the reset button to restart!\n");
+    	HAL_UART_Transmit(&huart1, buff6, strlen(buff6), 1000);
+        hit = 0;
+    	break;
+    }
+    //If the board is placed horizontally
+    if(aXYZ[1] > -200 && aXYZ[1] < 100 && aXYZ[0] > -200 && aXYZ[0] < 200 && aXYZ[2] > 800 && aXYZ[2] < 1200){
+    	char buff9[100];
+    	sprintf(buff9, "Smooth flight\n");
+    	HAL_UART_Transmit(&huart1, buff9, strlen(buff9), 1000);
+    }
+
+
+	}
+  /* USER CODE END 5 */
+
 }
+
 
 /**
   * @brief  Period elapsed callback in non blocking mode
@@ -690,8 +713,7 @@ void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
-	HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_RESET);
-	__BKPT();
+
   /* USER CODE END Error_Handler_Debug */
 }
 

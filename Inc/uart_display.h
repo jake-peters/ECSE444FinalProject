@@ -35,4 +35,5 @@ void flightDataSecondRow(char *second_row, char *instruction, uint8_t time) {
 }
 
 
+
 #endif // UART_DISPLAY_H

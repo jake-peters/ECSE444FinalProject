@@ -84,6 +84,15 @@ typedef enum {
 	TILT_LEFT,
 	FLAT,
 } board_orientation_t;
+
+typedef enum {
+	PITCH_UP,
+	TURN_LEFT,
+	TURN_RIGHT,
+	SHOOT,
+	DODGE,
+} game_instruction_t;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -109,11 +118,14 @@ void StartDisplayDataTask(void const * argument);
 int16_t aXYZ[3];
 int16_t count = 0;
 int16_t hit = 0;
+int16_t instruction_countdown = 0; // used to show how many time left to finish an instruction
+int16_t pitch_up_altitude = 0; // used in the pitch up instruction
 static int32_t altitude = 0; // unit in m
 static uint16_t speed = 100; // unit in km/h
 static int32_t horizontal_position = 0; // units in m, position for left and right
 static game_mode_t game_mode = GAME_START; // Initialize game mode to GAME_START
 static board_orientation_t orientation = FLAT;	// Current orientation of the board
+static game_instruction_t game_instruction = PITCH_UP;	// Initial instruction is always take off
 /* USER CODE END 0 */
 
 /**
@@ -608,6 +620,8 @@ void StartOrientationTask(void const * argument)
     	osDelay(100);
     }
 
+    // During GAME_RUNNING, this thread sets altitude and orientation during GAME_RUNNING mode based on accelerometer input
+
     //read from accelerometer
     //read the value from x-axis and set tilt down condition
 	if(aXYZ[0] > 300){
@@ -637,6 +651,11 @@ void StartOrientationTask(void const * argument)
 		game_mode = GAME_OVER;
 		HAL_UART_Transmit(&huart1,(uint8_t*)crash_message,sizeof(crash_message),1000);
 	}
+
+	// implement the count down counter and
+	instruction_countdown = 0;
+	pitch_up_altitude = 100;
+
 
 	// Temp disable until we know what to do with it
 	//Set the condition for the board droped to ground(free-fall)
@@ -684,6 +703,9 @@ void StartDataReadingTask(void const * argument)
     while(game_mode == GAME_START || game_mode == GAME_OVER) {
     	osDelay(50);
     }
+
+    // During GAME_RUNNING, This thread enable accelerometer sensor
+
     BSP_ACCELERO_AccGetXYZ(aXYZ);
   }
   /* USER CODE END StartDataReadingTask */
@@ -706,6 +728,9 @@ void StartGameTask(void const * argument)
     while(game_mode == GAME_RUNNING || game_mode == GAME_OVER) {
         osDelay(100);
     }
+
+    // At GAME_START mode, this thread enter pollStart function which prompt user to press "s" and set state to GAME_RUNNING
+
     game_mode = pollStart(game_mode);
   }
   /* USER CODE END StartGameTask */
@@ -728,6 +753,9 @@ void StartDisplayDataTask(void const * argument)
     while(game_mode == GAME_START || game_mode == GAME_OVER) {
     	osDelay(100);
     }
+
+    // following gets displayed during GAME_RUNNING
+    // First display the plane dynamic
     switch (orientation) {
 		case TILT_UP: {
 			HAL_UART_Transmit(&huart1,(uint8_t*)plane_up,sizeof(plane_up),1000);
@@ -751,13 +779,47 @@ void StartDisplayDataTask(void const * argument)
 			break;
 		}
     }
+    // Display flight info
 	HAL_UART_Transmit(&huart1,(uint8_t*)fd_title,sizeof(fd_title),1000);
 	flightDataFirstRow(&fd_first_row, altitude, speed);
 	flightDataSecondtRow(&fd_second_row, horizontal_position);
-	flightDataThirdRow(&fd_third_row, "Do a barrel roll", 23);
 	HAL_UART_Transmit(&huart1,(uint8_t*)fd_first_row,sizeof(fd_first_row),1000);
 	HAL_UART_Transmit(&huart1,(uint8_t*)fd_second_row,sizeof(fd_second_row),1000);
-	HAL_UART_Transmit(&huart1,(uint8_t*)fd_third_row,sizeof(fd_third_row),1000);
+
+	// Display instruction
+
+    switch (game_instruction) {
+		case PITCH_UP: {
+			snprintf(print_instruction,40,"Pitch up to %d m!", pitch_up_altitude);
+			flightDataThirdRow(&fd_third_row, print_instruction, instruction_countdown);
+			HAL_UART_Transmit(&huart1,(uint8_t*)fd_third_row,sizeof(fd_third_row),1000);
+			break;
+		}
+		case TURN_LEFT: {
+			snprintf(print_instruction,40,"Turn left!");
+			flightDataThirdRow(&fd_third_row, print_instruction, instruction_countdown);
+			HAL_UART_Transmit(&huart1,(uint8_t*)fd_third_row,sizeof(fd_third_row),1000);
+			break;
+		}
+		case TURN_RIGHT: {
+			snprintf(print_instruction,40,"Turn right!");
+			flightDataThirdRow(&fd_third_row, print_instruction, instruction_countdown);
+			HAL_UART_Transmit(&huart1,(uint8_t*)fd_third_row,sizeof(fd_third_row),1000);
+			break;
+		}
+		case SHOOT: {
+			snprintf(print_instruction,40,"Shoot the alien plane!");
+			flightDataThirdRow(&fd_third_row, print_instruction, instruction_countdown);
+			HAL_UART_Transmit(&huart1,(uint8_t*)fd_third_row,sizeof(fd_third_row),1000);
+			break;
+		}
+		case DODGE: {
+			snprintf(print_instruction,40,"Do a barrel roll to dodge Alien missile!");
+			flightDataThirdRow(&fd_third_row, print_instruction, instruction_countdown);
+			HAL_UART_Transmit(&huart1,(uint8_t*)fd_third_row,sizeof(fd_third_row),1000);
+			break;
+		}
+    }
   }
   /* USER CODE END StartDisplayDataTask */
 }

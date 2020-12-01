@@ -19,12 +19,13 @@ char game_starting_message[] = "\r\n============== The game will now be starting
 char crash_message[] = "\r\n============= GAME OVER - You have crashed ===============";
 char instruction1[] = "\r\n\n\n===Instruction 1: smooth climb up to 3000m! ===============";
 char instruction2[90] = "";
-char instruction33[] = "\r\n\n\n===Instruction 3: Turn left at 45 degrees to find enemies=======\n\n\n";
-char instruction3[] = "\r\n===Instruction 3: Enemies ahead! Fire! ===============";
-char instruction4[] = "\r\n===Instruction 4: Upside Down! ===============";
-char instruction5[] = "\r\n===Congratulations! You have passed all the instructions! ===============";
+char instruction33[] = "\r\n\n\n===Instruction 3: Turn left at 45 degrees to find enemies=======";
+char instruction3[] = "\r\n\n\n===Instruction 3: Enemies ahead! Fire! ===============\n\n\n";
+char instruction4[] = "\r\n\n\n===Instruction 4: Do a barrel roll! ===============\n\n\n";
+char instruction5[] = "\r\n\n\n===Congratulations! You have passed all the instructions! Land smoothly! ===============\n\n";
 char warning1[] = "\r\n===Warning! Correct your climbing degree ===============\n\n\n";
 char warning2[] = "\r\n\n\n===Good! You have been escaped! ===============\n\n";
+char warning3[] = "\r\n\n\n===Great Job! ===============\n\n\n";
 // Flight data
 char fd_title[] = "\r\n================== FLIGHT DATA =================";
 char fd_previous_row[63] = "";

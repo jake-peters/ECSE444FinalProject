@@ -112,6 +112,7 @@ int16_t count = 0;
 int16_t hit = 0;
 int16_t timecount = 6;
 int16_t missile = 0;
+int16_t roll = 0;
 static int32_t altitude = 0; // unit in m
 static int32_t xaxis = 0; //uint in degrees
 static int32_t yaxis = 0; //uint in degrees
@@ -683,18 +684,17 @@ void StartOrientationTask(void const * argument)
 
 	// Temp disable until we know what to do with it
 	//Set the condition for the board droped to ground(free-fall)
-//	if(aXYZ[1] > -500 && aXYZ[1] < 500 && aXYZ[0] > -500 && aXYZ[0] < 500 && aXYZ[2] > -500 && aXYZ[2] < 500){
-//		if(count == 1){
-//			char buff5[100];
-//			sprintf(buff5, "Crashed! Press the reset button to restart!\n");
-//			HAL_UART_Transmit(&huart1, buff5, strlen(buff5), 1000);
-//			count = 0;
-//			break;
-//		}
-//		else{
-//			count++;
-//		}
-//	}
+	if(aXYZ[1] > -500 && aXYZ[1] < 500 && aXYZ[0] > -500 && aXYZ[0] < 500 && aXYZ[2] > -500 && aXYZ[2] < 500 && roll == 1){
+		if(count == 1){
+			game_mode = GAME_OVER;
+			HAL_UART_Transmit(&huart1,(uint8_t*)parachute,sizeof(parachute),1000);
+			HAL_UART_Transmit(&huart1,(uint8_t*)crash_message,sizeof(crash_message),1000);
+			break;
+		}
+		else{
+			count++;
+		}
+	}
 	//If we double-tap(simulate the plane was hit) the board for 5 times,
 	//the status of the board became game over.
 	if(hit == 5){
@@ -711,9 +711,6 @@ void StartOrientationTask(void const * argument)
 		instruction = Instruction2;
 
   }
-    if(altitude > 3000 && horizontal_position > 60){
-    	instruction = Instruction3;
-    }
   /* USER CODE END 5 */
 }
 
@@ -739,6 +736,9 @@ void StartDataReadingTask(void const * argument)
     	gXYZ[0] = gXYZ[0]/1000;
    		gXYZ[1] = gXYZ[1]/1000;
     	gXYZ[2] = gXYZ[2]/1000;
+    	if(horizontal_position > 60 && missile == 0){
+    	   instruction = Instruction3;
+    	    }
   }
   /* USER CODE END StartDataReadingTask */
 }
@@ -836,16 +836,31 @@ void StartDisplayDataTask(void const * argument)
 	}
 
 	case Instruction3: {
-		if(horizontal_position < 300){
-				HAL_UART_Transmit(&huart1,(uint8_t*)instruction33,sizeof(instruction33),1000);
-		       if(!(yaxis > 42 && yaxis < 48)){
+		if(horizontal_position < 500){
+			   HAL_UART_Transmit(&huart1,(uint8_t*)instruction33,sizeof(instruction33),1000);
+		       if(!(yaxis < -41 && yaxis > -49)){
 					HAL_UART_Transmit(&huart1,(uint8_t*)warning1,sizeof(warning1),1000);
 						}
+		}
+		else if(horizontal_position >= 500){
+			HAL_UART_Transmit(&huart1,(uint8_t*)instruction3,sizeof(instruction3),1000);
+			if(missile == 1){
+				HAL_UART_Transmit(&huart1,(uint8_t*)warning3,sizeof(warning3),1000);
+				instruction = Instruction4;
+			}
 		}
 		break;
 	}
 	case Instruction4: {
-		HAL_UART_Transmit(&huart1,(uint8_t*)plane_left,sizeof(plane_left),1000);
+		if (roll == 0)
+		HAL_UART_Transmit(&huart1,(uint8_t*)instruction4,sizeof(instruction4),1000);
+		if(aXYZ[2] >= -1300 && aXYZ[2] < -700){
+//			HAL_UART_Transmit(&huart1,(uint8_t*)instruction5,sizeof(instruction5),1000);
+			roll = 1;
+		}
+		if (roll == 1){
+			HAL_UART_Transmit(&huart1,(uint8_t*)instruction5,sizeof(instruction5),1000);
+		}
 		break;
 	}
     }

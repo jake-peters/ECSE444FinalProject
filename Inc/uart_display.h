@@ -17,15 +17,21 @@ char count_down[] = "54321";
 char start_menu_message[] = "\r\n================= Press \"s\" to start the game! ==================";
 char game_starting_message[] = "\r\n============== The game will now be starting... Get ready in ==============\r\n";
 char crash_message[] = "\r\n============= GAME OVER - You have crashed ===============";
-char instruction1[] = "\r\n\n\n===Instruction 1: smooth climb up to 3000m! ===============";
-char instruction2[90] = "";
-char instruction33[] = "\r\n\n\n===Instruction 3: Turn left at 45 degrees to find enemies=======";
-char instruction3[] = "\r\n\n\n===Instruction 3: Enemies ahead! Fire! ===============\n\n\n";
-char instruction4[] = "\r\n\n\n===Instruction 4: Do a barrel roll! ===============\n\n\n";
-char instruction5[] = "\r\n\n\n===Congratulations! You have passed all the instructions! Land smoothly! ===============\n\n";
-char warning1[] = "\r\n===Warning! Correct your climbing degree ===============\n\n\n";
-char warning2[] = "\r\n\n\n===Good! You have been escaped! ===============\n\n";
-char warning3[] = "\r\n\n\n===Great Job! ===============\n\n\n";
+char instruction_failed[] = "\r\n============= GAME OVER - Instruction Failed ===============";
+char instruction1[] = "\r\n\n\n===Instruction 1: Smooth Climb Up To 3000m! ===============";
+char instruction2[150] = "";
+char instruction3[] = "\r\n\n\n======= Instruction 3: Turn left for 400m at 45 degrees  =======";
+char instruction4[] = "\r\n\n\n========= Instruction 3: Enemies Ahead! Fire the Missiles with the Blue Button! ============\n\n\n";
+char instruction5[] = "\r\n\n\n========= Instruction 4: Do a Barrel Roll! ===========\n\n\n";
+char instruction6[] = "\r\n\n\n========== You have passed all the instructions! Descend smoothly to 0 m ==========\n\n";
+char warning1[] = "\r\n========= Warning! Correct your climbing angle to 35 degrees ===============\n\n\n";
+char warning2[] = "\r\n========== Good! You have been escaped! ===============\n\n";
+char warning3[] = "\r\n============ Great Job!, Enemy Taken Out ===============\n\n\n";
+char warning4[] = "\r\n========= Warning! Correct your tilt angle to 45 degrees ===============\n\n\n";
+char warning5[] = "\r\n========== Push the Reset Button to Play Again ============\n\n\n";
+char warning6[] = "\r\n========= Warning! Correct your decent angle to 30 degrees ===============\n\n\n";
+char game_end[] = "\r\n========== Congratulations Maverick! Great Flight! ============\n\n\n";
+
 // Flight data
 char fd_title[] = "\r\n================== FLIGHT DATA =================";
 char fd_previous_row[63] = "";
@@ -45,7 +51,7 @@ static char plane_down[] = "\r\n\t\t     \\ /\r\n\t\t+____o0o____+\r\n\t\t \\   
 static char parachute[] = "\r\n\t\t .---.            P ! !\r\n\t\t(_____)         L\r\n\t\t \\   /        E\r\n\t\t _\\o/_H   E\r\n\t\t   \\\\\n";
 
 void instruction2countdown(char *instrction2, int count){
-	snprintf(instruction2,90,"\r\n\n\n===Instruction 2: You are locked! You have %d seconds to escape ===============\n\n",count);
+	snprintf(instruction2,150,"\r\n\n\n===Instruction 2: You are locked! You have %d seconds to escape, TAP THE BOARD!!! ===\n\n",count);
 }
 
 void flightDataPreviousRow(char *previous_row, int xaxis) {

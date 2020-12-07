@@ -59,6 +59,7 @@
 extern DMA_HandleTypeDef hdma_dac_ch1;
 extern DAC_HandleTypeDef hdac1;
 extern TIM_HandleTypeDef htim2;
+extern TIM_HandleTypeDef htim8;
 extern TIM_HandleTypeDef htim6;
 
 /* USER CODE BEGIN EV */
@@ -197,10 +198,25 @@ void EXTI15_10_IRQHandler(void)
   /* USER CODE BEGIN EXTI15_10_IRQn 0 */
 
   /* USER CODE END EXTI15_10_IRQn 0 */
+  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_11);
   HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_13);
   /* USER CODE BEGIN EXTI15_10_IRQn 1 */
 
   /* USER CODE END EXTI15_10_IRQn 1 */
+}
+
+/**
+  * @brief This function handles TIM8 update interrupt.
+  */
+void TIM8_UP_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM8_UP_IRQn 0 */
+
+  /* USER CODE END TIM8_UP_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim8);
+  /* USER CODE BEGIN TIM8_UP_IRQn 1 */
+
+  /* USER CODE END TIM8_UP_IRQn 1 */
 }
 
 /**

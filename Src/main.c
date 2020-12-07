@@ -27,7 +27,15 @@
 #include "arm_math.h"
 #include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include "stm32l475e_iot01.h"
+#include "stm32l475e_iot01_accelero.h"
+#include "stm32l475e_iot01_hsensor.h"
+#include "stm32l475e_iot01_magneto.h"
+#include "stm32l475e_iot01_psensor.h"
+#include "stm32l475e_iot01_qspi.h"
+#include "queue.h"
 #include "angles.h"
 #include "uart_display.h"
 #include "lsm6dsl.h"
@@ -40,6 +48,13 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define SOUNDFX1_ADDR     		((uint32_t)0x10000)
+#define SOUNDFX2_ADDR     		((uint32_t)0x20000)
+
+#define SOUNDFX_BUFF_SHORT			(uint32_t)18000
+#define SOUNDFX_BUFF_LONG			(uint32_t)32000
+
+#define PI 3.14159265
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -56,6 +71,7 @@ I2C_HandleTypeDef hi2c2;
 QSPI_HandleTypeDef hqspi;
 
 TIM_HandleTypeDef htim2;
+TIM_HandleTypeDef htim8;
 
 UART_HandleTypeDef huart1;
 
@@ -83,6 +99,8 @@ typedef enum {
 	Instruction2,
 	Instruction3,
 	Instruction4,
+	Instruction5,
+	Instruction6,
 } Instruction_state_t;
 /* USER CODE END PV */
 
@@ -95,13 +113,15 @@ static void MX_TIM2_Init(void);
 static void MX_I2C2_Init(void);
 static void MX_QUADSPI_Init(void);
 static void MX_USART1_UART_Init(void);
+static void MX_TIM8_Init(void);
 void StartOrientationTask(void const * argument);
 void StartDataReadingTask(void const * argument);
 void StartGameTask(void const * argument);
 void StartDisplayDataTask(void const * argument);
 
 /* USER CODE BEGIN PFP */
-
+void Store_TheoreticalSoundFX();
+void Play_SoundFX(uint8_t soundeffect);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -109,18 +129,24 @@ void StartDisplayDataTask(void const * argument);
 int16_t aXYZ[3];
 int16_t gXYZ[3];
 int16_t count = 0;
-int16_t hit = 0;
-int16_t timecount = 6;
-int16_t missile = 0;
-int16_t roll = 0;
+int8_t hit = 0;
+int8_t timecount = 10;
+int8_t missile = 0;
+int8_t roll = 0;
+uint8_t angle_error_count = 0;
+int16_t past_hor_pos = 0;
+uint8_t game_complete = 0;
 static int32_t altitude = 0; // unit in m
 static int32_t xaxis = 0; //uint in degrees
 static int32_t yaxis = 0; //uint in degrees
-static uint16_t speed = 100; // unit in km/h
+static uint16_t speed = 500; // unit in km/h
 static int32_t horizontal_position = 0; // units in m, position for left and right
 static game_mode_t game_mode = GAME_START; // Initialize game mode to GAME_START
 static board_orientation_t orientation = FLAT;	// Current orientation of the board
 static Instruction_state_t instruction = Instruction1;
+
+uint8_t sound_fx1[SOUNDFX_BUFF_SHORT];
+uint8_t sound_fx2[SOUNDFX_BUFF_LONG];
 /* USER CODE END 0 */
 
 /**
@@ -136,7 +162,7 @@ int main(void)
   /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-   HAL_Init();
+  HAL_Init();
 
   /* USER CODE BEGIN Init */
   BSP_ACCELERO_Init();
@@ -157,11 +183,13 @@ int main(void)
   MX_I2C2_Init();
   MX_QUADSPI_Init();
   MX_USART1_UART_Init();
+  MX_TIM8_Init();
   /* USER CODE BEGIN 2 */
   HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_SET); // Turn Red LED off
+  BSP_QSPI_Init();
+  Store_TheoreticalSoundFX();
 
-
-  //Double-tap recognition(Use single-tap to simulate the plane was hit.
+  //Double-tap recognition(Use single-tap to simulate the plane was hit)
   //We didn't choose single-tap recognition as it is so sensitive that very easy to be triggered by mistake.
   // Turn on the accelerometer and set the sampling rate at 416Hz
   SENSOR_IO_Write(LSM6DSL_ACC_GYRO_I2C_ADDRESS_LOW, LSM6DSL_ACC_GYRO_CTRL1_XL, 0x60);
@@ -320,7 +348,7 @@ static void MX_DAC1_Init(void)
   /** DAC channel OUT1 config
   */
   sConfig.DAC_SampleAndHold = DAC_SAMPLEANDHOLD_DISABLE;
-  sConfig.DAC_Trigger = DAC_TRIGGER_T2_TRGO;
+  sConfig.DAC_Trigger = DAC_TRIGGER_T8_TRGO;
   sConfig.DAC_OutputBuffer = DAC_OUTPUTBUFFER_ENABLE;
   sConfig.DAC_ConnectOnChipPeripheral = DAC_CHIPCONNECT_DISABLE;
   sConfig.DAC_UserTrimming = DAC_TRIMMING_FACTORY;
@@ -459,6 +487,53 @@ static void MX_TIM2_Init(void)
 }
 
 /**
+  * @brief TIM8 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM8_Init(void)
+{
+
+  /* USER CODE BEGIN TIM8_Init 0 */
+
+  /* USER CODE END TIM8_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM8_Init 1 */
+
+  /* USER CODE END TIM8_Init 1 */
+  htim8.Instance = TIM8;
+  htim8.Init.Prescaler = 0;
+  htim8.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim8.Init.Period = 1814;
+  htim8.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim8.Init.RepetitionCounter = 0;
+  htim8.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim8) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim8, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_UPDATE;
+  sMasterConfig.MasterOutputTrigger2 = TIM_TRGO2_UPDATE;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim8, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM8_Init 2 */
+
+  /* USER CODE END TIM8_Init 2 */
+
+}
+
+/**
   * @brief USART1 Initialization Function
   * @param None
   * @retval None
@@ -588,15 +663,83 @@ game_mode_t pollStart(game_mode_t game_mode) {
 		for (uint8_t i = 0; i < 5; i++) { // Countdown to start
 			HAL_UART_Transmit(&huart1,&count_down[i],1,1000);
 			HAL_UART_Transmit(&huart1,"\n",1,1000);
+			Play_SoundFX(1);
 			osDelay(1000);
 		}
-		// Start other threads again
-
+		Play_SoundFX(2);
 		return GAME_RUNNING;
 	}
 }
-void displayInstruction() {
+void Store_TheoreticalSoundFX() {
+	// Filler tones while we do not have sound effects
+	float32_t array_steps[2] = {(float)2*PI/32, (float)2*PI/22};
+	uint32_t array_addresses[2] = {SOUNDFX1_ADDR, SOUNDFX2_ADDR};
+	uint32_t array_buff_length[2] = {SOUNDFX_BUFF_SHORT, SOUNDFX_BUFF_LONG};
+	uint8_t temp_array[SOUNDFX_BUFF_LONG];
+	uint8_t maxValue = 255;
+	HAL_DAC_Stop_DMA(&hdac1, DAC_CHANNEL_1);
 
+	// Iterate over specified lengths of arrays for 6 Sound Effects
+	for (uint8_t i = 0; i < 2; i++) {
+		// Create the desired number of samples for each FX for half a second
+		for (uint32_t j=0; j < array_buff_length[i]; j++) {
+			temp_array[j] = (arm_sin_f32((float)(array_steps[i]*j)) + 1)*((maxValue)/2);
+		}
+		// Erase Block 1 at address
+		if(BSP_QSPI_Erase_Block(array_addresses[i]) != QSPI_OK) {
+		  Error_Handler();
+		} else {
+		  // Write to QSPI memory
+		  if(BSP_QSPI_Write(temp_array, array_addresses[i], array_buff_length[i]) != QSPI_OK) {
+			  Error_Handler();
+		  }
+		}
+	}
+	if(BSP_QSPI_Read(sound_fx1, array_addresses[0], SOUNDFX_BUFF_SHORT) != QSPI_OK) {
+		Error_Handler();
+	}
+	if(BSP_QSPI_Read(sound_fx2, array_addresses[1], SOUNDFX_BUFF_LONG) != QSPI_OK) {
+		Error_Handler();
+	}
+}
+
+void Play_SoundFX(uint8_t soundeffect) {
+	switch (soundeffect) {
+		case 1: {
+			HAL_TIM_Base_Start_IT(&htim8);
+			HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t*)sound_fx1, SOUNDFX_BUFF_SHORT, DAC_ALIGN_8B_R);
+			break;
+		}
+		case 2: {
+			HAL_TIM_Base_Start_IT(&htim8);
+			HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t*)sound_fx2, SOUNDFX_BUFF_LONG, DAC_ALIGN_8B_R);
+			break;
+		}
+	}
+}
+
+void Play_EndFX() {
+	Play_SoundFX(1);
+	osDelay(550);
+	Play_SoundFX(1);
+	osDelay(550);
+	Play_SoundFX(2);
+	osDelay(1000);
+	Play_SoundFX(1);
+	osDelay(550);
+	Play_SoundFX(2);
+	osDelay(1000);
+	Play_SoundFX(1);
+	osDelay(550);
+	Play_SoundFX(2);
+	osDelay(1000);
+}
+
+void HAL_DAC_ConvCpltCallbackCh1 (DAC_HandleTypeDef * hdac) {
+	if (&hdac->Instance == &hdac1){
+		HAL_DAC_Stop_DMA(&hdac1, DAC_CHANNEL_1);
+		HAL_TIM_Base_Stop_IT(&htim8);
+	}
 }
 /* USER CODE END 4 */
 
@@ -638,7 +781,7 @@ void StartOrientationTask(void const * argument)
 		xaxis = comp_filter(xaxis, gXYZ[1]);
 		yaxis = yangles((int)aXYZ[0], (int)aXYZ[1], (int)aXYZ[2]);
 		yaxis = comp_filter(yaxis, gXYZ[0]);
-		altitude -= (int)speed*(1/3.6);
+		altitude -= (int)(speed/35);
 		orientation = TILT_DOWN;
 	}
 	//read the value from x-axis and set tilt up condition
@@ -647,7 +790,7 @@ void StartOrientationTask(void const * argument)
 		xaxis = comp_filter(xaxis, gXYZ[1]);
 		yaxis = yangles((int)aXYZ[0], (int)aXYZ[1], (int)aXYZ[2]);
 		yaxis = comp_filter(yaxis, gXYZ[0]);
-		altitude += (int)speed*(1/3.6);
+		altitude += (int)(speed/35);
 		orientation = TILT_UP;
 	}
 	//read the value from y-axis and set turning left condition
@@ -656,7 +799,7 @@ void StartOrientationTask(void const * argument)
 		xaxis = comp_filter(xaxis, gXYZ[1]);
 		yaxis = yangles((int)aXYZ[0], (int)aXYZ[1], (int)aXYZ[2]);
 		yaxis = comp_filter(yaxis, gXYZ[0]);
-		horizontal_position -= (int)(speed/20);
+		horizontal_position -= (int)(speed/250);
 		orientation = TILT_LEFT;
 	}
 	//read the value from y-axis and set turning right condition
@@ -665,7 +808,7 @@ void StartOrientationTask(void const * argument)
 		xaxis = comp_filter(xaxis, gXYZ[1]);
 		yaxis = yangles((int)aXYZ[0], (int)aXYZ[1], (int)aXYZ[2]);
 		yaxis = comp_filter(yaxis, gXYZ[0]);
-		horizontal_position += (int)(speed/20);
+		horizontal_position += (int)(speed/250);
 		orientation = TILT_RIGHT;
 	}
 	//If the board is placed horizontally
@@ -676,11 +819,7 @@ void StartOrientationTask(void const * argument)
 		yaxis = comp_filter(yaxis, gXYZ[0]);
 		orientation = FLAT;
 	}
-	if (altitude < 0) {
-		game_mode = GAME_OVER;
-		HAL_UART_Transmit(&huart1,(uint8_t*)parachute,sizeof(parachute),1000);
-		HAL_UART_Transmit(&huart1,(uint8_t*)crash_message,sizeof(crash_message),1000);
-	}
+
 
 	// Temp disable until we know what to do with it
 	//Set the condition for the board droped to ground(free-fall)
@@ -697,19 +836,14 @@ void StartOrientationTask(void const * argument)
 	}
 	//If we double-tap(simulate the plane was hit) the board for 5 times,
 	//the status of the board became game over.
-	if(hit == 5){
-		char buff6[100];
-		sprintf(buff6, "Was shot down! Press the reset button to restart!\n");
+	if(hit == 10) {
+		char buff6[150];
+		sprintf(buff6, "Too Many Evasive Maneuvers, Structural Failure! Press the reset button to restart!\n");
 		HAL_UART_Transmit(&huart1, buff6, strlen(buff6), 1000);
+		HAL_UART_Transmit(&huart1,(uint8_t*)parachute,sizeof(parachute),1000);
 		hit = 0;
-		break;
+		game_mode = GAME_OVER;
 	}
-	if(altitude < 3000){
-		instruction = Instruction1;
-	}
-	if(altitude > 3000 && aXYZ[1] > -200 && aXYZ[1] < 100 && aXYZ[0] > -200 && aXYZ[0] < 200 && aXYZ[2] > 800 && aXYZ[2] < 1200 && hit == 0 && horizontal_position < 60)
-		instruction = Instruction2;
-
   }
   /* USER CODE END 5 */
 }
@@ -733,12 +867,9 @@ void StartDataReadingTask(void const * argument)
     }
     BSP_ACCELERO_AccGetXYZ(aXYZ);
     LSM6DSL_GyroReadXYZAngRate(gXYZ);
-    	gXYZ[0] = gXYZ[0]/1000;
-   		gXYZ[1] = gXYZ[1]/1000;
-    	gXYZ[2] = gXYZ[2]/1000;
-    	if(horizontal_position > 60 && missile == 0){
-    	   instruction = Instruction3;
-    	    }
+	gXYZ[0] = gXYZ[0]/1000;
+	gXYZ[1] = gXYZ[1]/1000;
+	gXYZ[2] = gXYZ[2]/1000;
   }
   /* USER CODE END StartDataReadingTask */
 }
@@ -756,7 +887,7 @@ void StartGameTask(void const * argument)
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1000);
+    osDelay(500);
     while(game_mode == GAME_RUNNING || game_mode == GAME_OVER) {
         osDelay(100);
     }
@@ -807,74 +938,114 @@ void StartDisplayDataTask(void const * argument)
     }
 
     switch (instruction){
-	case Instruction1: {
-		if (altitude < 3000){
-		HAL_UART_Transmit(&huart1,(uint8_t*)instruction1,sizeof(instruction1),1000);
-				if(!(xaxis > 30 && xaxis < 35)){
+		case Instruction1: {
+			if (altitude < 3000) {
+				HAL_UART_Transmit(&huart1,(uint8_t*)instruction1,sizeof(instruction1),1000);
+				if(!(xaxis > 30 && xaxis < 40)){
+					angle_error_count++;
 					HAL_UART_Transmit(&huart1,(uint8_t*)warning1,sizeof(warning1),1000);
 				}
+			} else {
+				instruction = Instruction2;
+				past_hor_pos = horizontal_position;
+				angle_error_count = 0;
+			}
+			break;
 		}
-		break;
-	}
-	case Instruction2: {
-		if(horizontal_position < 60){
-		if(hit == 0){
-		timecount = timecount - 1;
-		instruction2countdown(&instruction2,timecount);
-		HAL_UART_Transmit(&huart1,(uint8_t*)instruction2,sizeof(instruction2),1000);
+		case Instruction2: {
+			if(hit < 3){
+				timecount = timecount - 1;
+				instruction2countdown(&instruction2,timecount);
+				Play_SoundFX(1);
+				HAL_UART_Transmit(&huart1,(uint8_t*)instruction2,sizeof(instruction2),1000);
+			} else if(hit >= 3) {
+				HAL_UART_Transmit(&huart1,(uint8_t*)warning2,sizeof(warning2),1000);
+				instruction = Instruction3;
+				timecount = 6;
+				past_hor_pos = horizontal_position;
+			}
+			if (timecount == 0) {
+				game_mode = GAME_OVER;
+				HAL_UART_Transmit(&huart1,(uint8_t*)parachute,sizeof(parachute),1000);
+				HAL_UART_Transmit(&huart1,(uint8_t*)crash_message,sizeof(crash_message),1000);
+				HAL_UART_Transmit(&huart1,(uint8_t*)warning5,sizeof(warning5),1000);
+			}
+			break;
 		}
-		if(hit == 1){
-			HAL_UART_Transmit(&huart1,(uint8_t*)warning2,sizeof(warning2),1000);
+		case Instruction3: {
+			if (!(horizontal_position < (past_hor_pos-400))) {
+				HAL_UART_Transmit(&huart1,(uint8_t*)instruction3,sizeof(instruction3),1000);
+				if (!(yaxis > 40 && yaxis < 50)) {
+				   angle_error_count++;
+				   HAL_UART_Transmit(&huart1,(uint8_t*)warning4,sizeof(warning4),1000);
+				}
+			} else {
+				instruction = Instruction4;
+				past_hor_pos = horizontal_position;
+				angle_error_count = 0;
+			}
+			break;
 		}
-		if (timecount == 0 && hit == 0){
-			game_mode = GAME_OVER;
-			HAL_UART_Transmit(&huart1,(uint8_t*)parachute,sizeof(parachute),1000);
-			HAL_UART_Transmit(&huart1,(uint8_t*)crash_message,sizeof(crash_message),1000);
+		case Instruction4: {
+			if (roll == 0) {
+				HAL_UART_Transmit(&huart1,(uint8_t*)instruction5,sizeof(instruction5),1000);
+			}
+			if(aXYZ[2] >= -1300 && aXYZ[2] < -700){
+				roll = 1;
+			}
+			if (roll >= 1){
+				instruction = Instruction5;
+			}
+			break;
 		}
-		}
-		break;
-	}
-
-	case Instruction3: {
-		if(horizontal_position < 500){
-			   HAL_UART_Transmit(&huart1,(uint8_t*)instruction33,sizeof(instruction33),1000);
-		       if(!(yaxis < -41 && yaxis > -49)){
-					HAL_UART_Transmit(&huart1,(uint8_t*)warning1,sizeof(warning1),1000);
-						}
-		}
-		else if(horizontal_position >= 500){
-			HAL_UART_Transmit(&huart1,(uint8_t*)instruction3,sizeof(instruction3),1000);
+		case Instruction5: {
+			HAL_UART_Transmit(&huart1,(uint8_t*)instruction4,sizeof(instruction4),1000);
 			if(missile == 1){
 				HAL_UART_Transmit(&huart1,(uint8_t*)warning3,sizeof(warning3),1000);
-				instruction = Instruction4;
+				instruction = Instruction6;
 			}
+			break;
 		}
-		break;
-	}
-	case Instruction4: {
-		if (roll == 0)
-		HAL_UART_Transmit(&huart1,(uint8_t*)instruction4,sizeof(instruction4),1000);
-		if(aXYZ[2] >= -1300 && aXYZ[2] < -700){
-//			HAL_UART_Transmit(&huart1,(uint8_t*)instruction5,sizeof(instruction5),1000);
-			roll = 1;
+		case Instruction6: {
+			if(altitude > 20) {
+				HAL_UART_Transmit(&huart1,(uint8_t*)instruction6,sizeof(instruction6),1000);
+				if(!(xaxis < -26 && xaxis > -34)){
+					angle_error_count++;
+					HAL_UART_Transmit(&huart1,(uint8_t*)warning6,sizeof(warning6),1000);
+				}
+			} else {
+				game_complete = 1;
+			}
+			break;
 		}
-		if (roll == 1){
-			HAL_UART_Transmit(&huart1,(uint8_t*)instruction5,sizeof(instruction5),1000);
-		}
-		break;
-	}
     }
 	HAL_UART_Transmit(&huart1,(uint8_t*)fd_title,sizeof(fd_title),1000);
 	flightDataPreviousRow(&fd_previous_row, xaxis);
 	flightDataPrevious2Row(&fd_previous2_row, yaxis);
 	flightDataFirstRow(&fd_first_row, altitude, speed);
 	flightDataSecondtRow(&fd_second_row, horizontal_position);
-	flightDataThirdRow(&fd_third_row, "Do a barrel roll", 23);
 	HAL_UART_Transmit(&huart1,(uint8_t*)fd_previous_row,sizeof(fd_previous_row),1000);
 	HAL_UART_Transmit(&huart1,(uint8_t*)fd_previous2_row,sizeof(fd_previous2_row),1000);
 	HAL_UART_Transmit(&huart1,(uint8_t*)fd_first_row,sizeof(fd_first_row),1000);
 	HAL_UART_Transmit(&huart1,(uint8_t*)fd_second_row,sizeof(fd_second_row),1000);
 	HAL_UART_Transmit(&huart1,(uint8_t*)fd_third_row,sizeof(fd_third_row),1000);
+	if (altitude < 0 && game_complete == 0) {
+			game_mode = GAME_OVER;
+			HAL_UART_Transmit(&huart1,(uint8_t*)parachute,sizeof(parachute),1000);
+			HAL_UART_Transmit(&huart1,(uint8_t*)crash_message,sizeof(crash_message),1000);
+		}
+	if (game_complete == 1) {
+		game_mode = GAME_OVER;
+		HAL_UART_Transmit(&huart1,(uint8_t*)game_end,sizeof(game_end),1000);
+		HAL_UART_Transmit(&huart1,(uint8_t*)warning5,sizeof(warning5),1000);
+		Play_EndFX();
+	}
+	if (angle_error_count > 12){
+		game_mode = GAME_OVER;
+		HAL_UART_Transmit(&huart1,(uint8_t*)parachute,sizeof(parachute),1000);
+		HAL_UART_Transmit(&huart1,(uint8_t*)instruction_failed,sizeof(instruction_failed),1000);
+		HAL_UART_Transmit(&huart1,(uint8_t*)warning5,sizeof(warning5),1000);
+	}
   }
   /* USER CODE END StartDisplayDataTask */
 }
